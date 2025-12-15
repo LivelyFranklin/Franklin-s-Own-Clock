@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>506 Smart Clock - Static Liquid</title>
+
+<script src="https://lib.baomitu.com/lunar-javascript/1.6.12/lunar.min.js"></script>
+
+<style>
+:root {
+  --apple-text: #1d1d1f;
+  --apple-gray: #86868b;
+  --apple-red: #ff3b30;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+
+  /* Apple Font Stack */
+  font-family: "SF Pro Display", "SF Pro Text", "PingFang SC", ".PingFang SC", "Heiti SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+    
+  background-color: #f5f5f7;
+}
+
+/* === 背景流动层 === */
+#bg-flow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+    
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+    
+  /* 初始背景 */
+  background-image: url('https://pic.82314912.xyz/api/cfile/AgACAgEAAyEGAATEcCnBAAIBd2lAC-qllMSTI38mRT4qxWPYMqnHAAIfC2sb9OABRm92tTAmhAG3AQADAgADdwADNgQ');
+    
+  /* 仅保留切换图片时的过渡，移除呼吸动画以保持静止 */
+  transition: background-image 1.5s ease-in-out;
+}
+
+/* === 极致融合液态层 === */
+.glass-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+
+  /* 极致降低背景覆盖色，几乎完全透明 */
+  background: rgba(255, 255, 255, 0.01); 
+      
+  /* 超强高斯模糊 + 极高饱和度 */
+  backdrop-filter: blur(90px) saturate(200%);
+  -webkit-backdrop-filter: blur(90px) saturate(200%);
+    
+  /* 移除 box-shadow，彻底消除边缘分层感 */
+  box-shadow: none;
+}
+
+/* 液态光斑动画 - 模拟内部光效 */
+.glass-layer::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+    
+  /* 柔和光斑 */
+  background:
+    radial-gradient(60vw 60vw at 25% 30%, rgba(255,255,255,0.12), transparent 50%),
+    radial-gradient(70vw 70vw at 60% 80%, rgba(255,255,255,0.08), transparent 50%),
+    conic-gradient(from 220deg at 50% 50%, rgba(255,255,255,0.05), transparent, rgba(255,255,255,0.05));
+      
+  filter: blur(80px);
+    
+  mix-blend-mode: soft-light;
+    
+  pointer-events: none;
+  animation: liquidFloat 18s ease-in-out infinite;
+}
+
+/* 内容容器 */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+  z-index: 10;
+  position: relative;
+}
+
+#clock {
+  font-size: 22vw; 
+  font-weight: 700;
+  
+  /* 【关键修改 1】使用 fit-content 让容器紧贴文字，消除全屏宽度的框框感 */
+  width: fit-content;
+  
+  /* 【关键修改 2】增加四周内边距，给阴影和字体边缘留出足够的渲染呼吸空间 */
+  padding: 1vh 4vw 3vh 4vw;
+  
+  /* 【关键修改 3】使用 margin: auto 配合 fit-content 实现居中，微调顶部负边距以保持视觉位置 */
+  margin: -2vh auto 0 auto;
+
+  line-height: 1.1; 
+  letter-spacing: -0.04em; 
+  white-space: nowrap;
+
+  /* 初始颜色 */
+  background-image: linear-gradient(180deg, #0071e3 0%, #5e5ce6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+
+  transition: all 1.5s ease-in-out;
+  font-variant-numeric: tabular-nums;
+  
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.1));
+}
+
+.date-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 0vh; /* 微调间距 */
+  margin-bottom: 4vh;
+  color: var(--apple-text);
+  font-weight: 600; 
+}
+
+#date-solar {
+  font-size: 2.5vw;
+  font-weight: 600;
+  opacity: 0.90;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.8vh;
+  text-shadow: 0 2px 15px rgba(255,255,255,0.6);
+}
+
+#date-lunar {
+  font-size: 1.7vw;
+  font-weight: 400;
+  opacity: 0.80;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-shadow: 0 2px 15px rgba(255,255,255,0.6);
+}
+
+.festival-badge {
+  background-color: rgba(255, 59, 48, 0.1);
+  color: var(--apple-red);
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.85em;
+  border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+/* Message Bar */
+.message-bar {
+  white-space: nowrap;
+  font-size: 1.8vw;
+  font-weight: 500;
+  color: #1d1d1f;
+    
+  background: rgba(255, 255, 255, 0.25);
+  padding: 14px 40px;
+  border-radius: 999px;
+    
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+    
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* 动画定义 - 仅保留光斑浮动，背景呼吸已移除 */
+@keyframes liquidFloat {
+  0%{ transform: translate(-5%,-5%) scale(1.0) rotate(0deg); }
+  50%{ transform: translate(5%,5%) scale(1.1) rotate(2deg); }
+  100%{ transform: translate(-5%,-5%) scale(1.0) rotate(0deg); }
+}
+
+/* 移动端/竖屏适配 */
+@media (max-width: 768px) {
+  #clock { 
+    font-size: 15.5vw; 
+    letter-spacing: -0.03em; 
+    /* 移动端也同步调整 margin */
+    margin: -5vh auto 0 auto;
+    /* 移动端增加更多左右内边距防止贴边 */
+    padding: 1vh 5vw 3vh 5vw;
+  }
+      
+  #date-solar { font-size: 5vw; margin-top: 1vh;}
+  #date-lunar { font-size: 3.2vw; flex-wrap: wrap; justify-content: center;}
+      
+  .message-bar { 
+    font-size: 3.5vw; 
+    padding: 10px 20px; 
+    white-space: normal;
+    width: 85%;
+    line-height: 1.5;
+  }
+}
+</style>
+</head>
+
+<body>
+<div id="bg-flow"></div>
+
+<div class="glass-layer"></div>
+
+<div class="container">
+  <div id="clock">00:00:00</div>
+
+  <div class="date-container">
+    <div id="date-solar">载入中...</div>
+    <div id="date-lunar"></div>
+  </div>
+
+  <div class="message-bar">
+    好事尽从难处得，少年无向易中轻。
+  </div>
+</div>
+
+<script>
+// --- 1) 图片库 ---
+const bgImages = [
+  "https://pic.82314912.xyz/api/cfile/AgACAgEAAyEGAATEcCnBAAIBd2lAC-qllMSTI38mRT4qxWPYMqnHAAIfC2sb9OABRm92tTAmhAG3AQADAgADdwADNgQ", // IMG_2528
+  "https://pic.82314912.xyz/api/cfile/AgACAgEAAyEGAATEcCnBAAIBeGlADOLIhqvWRYrqxcKla7fFIYh1AAIgC2sb9OABRibFv9z0UJ7zAQADAgADdwADNgQ", // IMG_2534
+  "https://pic.82314912.xyz/api/cfile/AgACAgEAAyEGAATEcCnBAAIBeWlADOfoOeprYagDLGgVLD0jB0QJAAIhC2sb9OABRtfK5Ew_D4d7AQADAgADdwADNgQ", // IMG_2532
+  "https://pic.82314912.xyz/api/cfile/AgACAgEAAyEGAATEcCnBAAIBemlADOoX53QyNIQn2_ZKvF2em4uQAAIiC2sb9OABRpqs7CDjYyIRAQADAgADdwADNgQ", // IMG_2531
+  "https://pic.82314912.xyz/api/cfile/AgACAgEAAyEGAATEcCnBAAIBe2lADO_ThBFfhKNniLkjYA0bPDZ_AAIjC2sb9OABRtRGzKxNfrCyAQADAgADdwADNgQ", // IMG_2530
+  "https://pic.82314912.xyz/api/cfile/AgACAgEAAyEGAATEcCnBAAIBfGlADPGltTSw_ueupow6wOvJh3CSAAIkC2sb9OABRnvdtqWbUbFVAQADAgADdwADNgQ", // IMG_2529
+  "https://pic.82314912.xyz/api/cfile/AgACAgEAAyEGAATEcCnBAAIBfWlADPPxsCxEmBy22Eut02h-i-DuAAIlC2sb9OABRiagQbdcxKZDAQADAgADdwADNgQ", // IMG_2527
+  "https://pic.82314912.xyz/api/cfile/AgACAgEAAyEGAATEcCnBAAIBfmlADPZaYc9FvRPu5TQrPVA0R-WBAAImC2sb9OABRtEUzFR_s100AQADAgADdwADNgQ", // IMG_2526
+  "https://pic.82314912.xyz/api/cfile/AgACAgEAAyEGAATEcCnBAAIBf2lADPpwc3oK-hjhuspA75QkzrmYAAInC2sb9OABRjUpCdzjXFF3AQADAgADdwADNgQ"  // IMG_2525
+];
+
+// --- 2) 100种精选“高亮、活力”渐变色库 ---
+const gradients = [
+  // 1-10: Apple High Vibrancy
+  "linear-gradient(180deg, #0071e3 0%, #5e5ce6 100%)", 
+  "linear-gradient(180deg, #34C759 0%, #00C7BE 100%)",
+  "linear-gradient(180deg, #FF2D55 0%, #FF375F 100%)",
+  "linear-gradient(180deg, #FF9500 0%, #FFCC00 100%)",
+  "linear-gradient(180deg, #AF52DE 0%, #5856D6 100%)",
+  "linear-gradient(180deg, #5AC8FA 0%, #007AFF 100%)",
+  "linear-gradient(135deg, #FF3B30 0%, #FF9500 100%)",
+  "linear-gradient(135deg, #5856D6 0%, #FF2D55 100%)",
+  "linear-gradient(135deg, #00C7BE 0%, #30D158 100%)",
+  "linear-gradient(135deg, #FFD60A 0%, #FF9F0A 100%)",
+
+  // 11-20: Neon & Cyber Pulse
+  "linear-gradient(135deg, #00c6ff 0%, #0072ff 100%)", 
+  "linear-gradient(135deg, #f12711 0%, #f5af19 100%)",
+  "linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%)",
+  "linear-gradient(135deg, #ff00cc 0%, #333399 100%)",
+  "linear-gradient(135deg, #c4e0e5 0%, #4ca1af 100%)", 
+  "linear-gradient(135deg, #ED213A 0%, #93291E 100%)",
+  "linear-gradient(135deg, #FDC830 0%, #F37335 100%)",
+  "linear-gradient(135deg, #00B4DB 0%, #0083B0 100%)",
+  "linear-gradient(135deg, #DA22FF 0%, #9733EE 100%)",
+  "linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)",
+
+  // 21-30: Tropical & Fruit
+  "linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%)",
+  "linear-gradient(135deg, #fffc00 0%, #ffffff 100%)",
+  "linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%)",
+  "linear-gradient(135deg, #ffe259 0%, #ffa751 100%)",
+  "linear-gradient(135deg, #5433FF 0%, #20BDFF 50%, #A5FECB 100%)",
+  "linear-gradient(135deg, #7F7FD5 0%, #86A8E7 50%, #91EAE4 100%)",
+  "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+  "linear-gradient(135deg, #C9FFBF 0%, #FFAFBD 100%)",
+  "linear-gradient(135deg, #FC466B 0%, #3F5EFB 100%)",
+  "linear-gradient(135deg, #00F260 0%, #0575E6 100%)",
+
+  // 31-40: Daybreak & Sunset
+  "linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)",
+  "linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%)",
+  "linear-gradient(135deg, #654ea3 0%, #eaafc8 100%)",
+  "linear-gradient(135deg, #ffb347 0%, #ffcc33 100%)",
+  "linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)",
+  "linear-gradient(135deg, #B24592 0%, #F15F79 100%)",
+  "linear-gradient(135deg, #C6FFDD 0%, #FBD786 50%, #f7797d 100%)",
+  "linear-gradient(135deg, #FFEFBA 0%, #FFFFFF 100%)",
+  "linear-gradient(135deg, #4568DC 0%, #B06AB3 100%)",
+  "linear-gradient(135deg, #36D1DC 0%, #5B86E5 100%)",
+
+  // 41-50: Electric & Glossy
+  "linear-gradient(135deg, #D3CCE3 0%, #E9E4F0 100%)",
+  "linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%)",
+  "linear-gradient(135deg, #E8CBC0 0%, #636FA4 100%)",
+  "linear-gradient(135deg, #CC95C0 0%, #DBD4B4 50%, #7AA1D2 100%)",
+  "linear-gradient(135deg, #1c92d2 0%, #f2fcfe 100%)",
+  "linear-gradient(135deg, #4AC29A 0%, #BDFFF3 100%)",
+  "linear-gradient(135deg, #A770EF 0%, #CF8BF3 50%, #FDB99B 100%)",
+  "linear-gradient(135deg, #dd3e54 0%, #6be585 100%)",
+  "linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%)",
+  "linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)",
+
+  // 51-60: Vivid Nature
+  "linear-gradient(135deg, #2BC0E4 0%, #EAECC6 100%)",
+  "linear-gradient(135deg, #96c93d 0%, #00b09b 100%)",
+  "linear-gradient(135deg, #005C97 0%, #363795 100%)",
+  "linear-gradient(135deg, #4CB8C4 0%, #3CD3AD 100%)",
+  "linear-gradient(135deg, #1D976C 0%, #93F9B9 100%)",
+  "linear-gradient(135deg, #24C6DC 0%, #514A9D 100%)",
+  "linear-gradient(135deg, #603813 0%, #b29f94 100%)",
+  "linear-gradient(135deg, #FEAC5E 0%, #C779D0 50%, #4BC0C8 100%)",
+  "linear-gradient(135deg, #FF5F6D 0%, #FFC371 100%)",
+  "linear-gradient(135deg, #3a1c71 0%, #d76d77 50%, #ffaf7b 100%)",
+
+  // 61-70: Candy Pop
+  "linear-gradient(135deg, #e1eec3 0%, #f05053 100%)",
+  "linear-gradient(135deg, #ff0084 0%, #33001b 100%)", 
+  "linear-gradient(135deg, #000428 0%, #004e92 100%)", 
+  "linear-gradient(135deg, #add100 0%, #7b920a 100%)",
+  "linear-gradient(135deg, #ff4b1f 0%, #1fddff 100%)",
+  "linear-gradient(135deg, #aa4b6b 0%, #6b6b83 50%, #3b8d99 100%)",
+  "linear-gradient(135deg, #c31432 0%, #240b36 100%)",
+  "linear-gradient(135deg, #f09819 0%, #edde5d 100%)",
+  "linear-gradient(135deg, #FF8008 0%, #FFC837 100%)",
+  "linear-gradient(135deg, #16BFFD 0%, #CB3066 100%)",
+
+  // 71-80: High Contrast & Bold
+  "linear-gradient(135deg, #EB3349 0%, #F45C43 100%)",
+  "linear-gradient(135deg, #43cea2 0%, #185a9d 100%)",
+  "linear-gradient(135deg, #ec008c 0%, #fc6767 100%)",
+  "linear-gradient(135deg, #cc2b5e 0%, #753a88 100%)",
+  "linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%)",
+  "linear-gradient(135deg, #74ebd5 0%, #ACB6E5 100%)",
+  "linear-gradient(135deg, #6BE585 0%, #DD3E54 100%)",
+  "linear-gradient(135deg, #e96443 0%, #904e95 100%)",
+  "linear-gradient(135deg, #200122 0%, #6f0000 100%)",
+  "linear-gradient(135deg, #E55D87 0%, #5FC3E4 100%)",
+
+  // 81-90: Fresh & Clean
+  "linear-gradient(135deg, #3494E6 0%, #EC6EAD 100%)",
+  "linear-gradient(135deg, #67B26F 0%, #4ca2cd 100%)",
+  "linear-gradient(135deg, #F3904F 0%, #3B4371 100%)",
+  "linear-gradient(135deg, #ee9ca7 0%, #ffdde1 100%)",
+  "linear-gradient(135deg, #C02425 0%, #F0CB35 100%)",
+  "linear-gradient(135deg, #40E0D0 0%, #FF8C00 100%)",
+  "linear-gradient(135deg, #de6161 0%, #2657eb 100%)",
+  "linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)",
+  "linear-gradient(135deg, #B993D6 0%, #8CA6DB 100%)",
+  "linear-gradient(135deg, #9D50BB 0%, #6E48AA 100%)",
+
+  // 91-100: Ultimate Vibrancy
+  "linear-gradient(135deg, #41295a 0%, #2F0743 100%)", 
+  "linear-gradient(135deg, #00C9FF 0%, #92FE9D 100%)",
+  "linear-gradient(135deg, #fc00ff 0%, #00dbde 100%)",
+  "linear-gradient(135deg, #fce38a 0%, #f38181 100%)",
+  "linear-gradient(135deg, #5D26C1 0%, #a17fe0 50%, #59C173 100%)",
+  "linear-gradient(135deg, #85D8CE 0%, #085078 100%)",
+  "linear-gradient(135deg, #f857a6 0%, #ff5858 100%)",
+  "linear-gradient(135deg, #24FE41 0%, #FDFC47 100%)", 
+  "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+  "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)"
+];
+
+// --- 3) 切换逻辑 ---
+
+// 切换字体颜色
+function changeTheme() {
+  const newGradient = gradients[Math.floor(Math.random() * gradients.length)];
+  document.getElementById('clock').style.backgroundImage = newGradient;
+}
+
+// 切换背景图片
+function changeBackground() {
+  const randomImg = bgImages[Math.floor(Math.random() * bgImages.length)];
+  const bgDiv = document.getElementById('bg-flow');
+    
+  // 预加载图片以防闪烁
+  const img = new Image();
+  img.src = randomImg;
+  img.onload = () => {
+    bgDiv.style.backgroundImage = `url('${randomImg}')`;
+  };
+}
+
+// --- 4) 时间与日期逻辑 ---
+function updateTime() {
+  const now = new Date();
+
+  // 时分秒
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  document.getElementById('clock').innerText = `${h}:${m}:${s}`;
+
+  // 公历日期
+  const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const date = now.getDate();
+  const dayName = days[now.getDay()];
+  document.getElementById('date-solar').innerText = `${year}年${month}月${date}日 ${dayName}`;
+
+  // 农历日期
+  try {
+    const solar = Solar.fromDate(now);
+    const lunar = solar.getLunar();
+
+    const ganZhiYear = lunar.getYearInGanZhi();
+    const shengXiao = lunar.getYearShengXiao();
+    const lunarMonth = lunar.getMonthInChinese();
+    const lunarDay = lunar.getDayInChinese();
+
+    let lunarText = `${ganZhiYear}年「${shengXiao}」· 农历${lunarMonth}月${lunarDay}`;
+
+    const jieQi = lunar.getJieQi();
+    if (jieQi) lunarText += ` · ${jieQi}`;
+
+    const lunarFestivals = lunar.getFestivals();
+    const solarFestivals = solar.getFestivals();
+    const allFestivals = [...lunarFestivals, ...solarFestivals];
+
+    let lunarHtml = `<span>${lunarText}</span>`;
+    if (allFestivals.length > 0) {
+      allFestivals.forEach(fest => {
+        if(fest && fest.length <= 5) {
+          lunarHtml += `<span class="festival-badge">${fest}</span>`;
+        }
+      });
+    }
+    document.getElementById('date-lunar').innerHTML = lunarHtml;
+  } catch (e) {
+    console.error("农历计算出错:", e);
+  }
+}
+
+// --- 启动 ---
+updateTime();
+changeTheme();
+changeBackground();
+
+setInterval(updateTime, 1000);
+setInterval(changeTheme, 600000);     // 10分钟换一次字体颜色
+setInterval(changeBackground, 600000); // 10分钟换一次背景图片
+</script>
+</body>
+</html>
